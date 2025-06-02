@@ -19,24 +19,36 @@ class CSVHandler:
     def _initialize_csv_files(self):
         """Create meal CSV files if they don't exist (ingredients.csv already exists)"""
 
-        # Meals database - stores created meal recipes
+        # Meals database - stores created meal recipes (UPDATED with servings)
         if not os.path.exists(self.meals_file):
             meals_df = pd.DataFrame(columns=[
-                'meal_id', 'meal_name', 'ingredients_list', 'quantities_list',
+                'meal_id', 'meal_name', 'servings', 'ingredients_list', 'quantities_list',
+                # Total nutrition
                 'total_calories', 'total_protein', 'total_fat_total', 'total_fat_saturated',
                 'total_carbohydrate', 'total_sugars', 'total_dietary_fibre_g',
-                'total_sodium_mg', 'total_calcium_mg', 'created_date'
+                'total_sodium_mg', 'total_calcium_mg',
+                # Per serving nutrition
+                'calories_per_serving', 'protein_per_serving', 'fat_total_per_serving',
+                'fat_saturated_per_serving', 'carbohydrate_per_serving', 'sugars_per_serving',
+                'dietary_fibre_per_serving', 'sodium_per_serving', 'calcium_per_serving',
+                'created_date'
             ])
             meals_df.to_csv(self.meals_file, index=False)
 
-        # Meal log - logs when meals are consumed
+        # Meal log - logs when meals are consumed (UPDATED with servings)
         if not os.path.exists(self.meal_log_file):
             meal_log_df = pd.DataFrame(columns=[
-                'log_id', 'date', 'meal_time', 'meal_id', 'meal_name',
-                'ingredients_list', 'quantities_list', 'total_calories',
-                'total_protein', 'total_fat_total', 'total_fat_saturated',
+                'log_id', 'date', 'meal_time', 'meal_id', 'meal_name', 'servings',
+                'ingredients_list', 'quantities_list',
+                # Total nutrition
+                'total_calories', 'total_protein', 'total_fat_total', 'total_fat_saturated',
                 'total_carbohydrate', 'total_sugars', 'total_dietary_fibre_g',
-                'total_sodium_mg', 'total_calcium_mg', 'notes'
+                'total_sodium_mg', 'total_calcium_mg',
+                # Per serving nutrition
+                'calories_per_serving', 'protein_per_serving', 'fat_total_per_serving',
+                'fat_saturated_per_serving', 'carbohydrate_per_serving', 'sugars_per_serving',
+                'dietary_fibre_per_serving', 'sodium_per_serving', 'calcium_per_serving',
+                'notes'
             ])
             meal_log_df.to_csv(self.meal_log_file, index=False)
 

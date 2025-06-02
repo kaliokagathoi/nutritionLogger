@@ -1,3 +1,4 @@
+
 from flask import Flask, render_template, request, jsonify
 import os
 import sys
@@ -12,7 +13,7 @@ from meal_operations import MealOperations
 
 app = Flask(__name__)
 
-# Configuration - fix the paths
+# Configuration
 CSV_DIR = PROJECT_DIR  # ingredients.csv is in main folder
 DATA_DIR = os.path.join(PROJECT_DIR, "data")  # generated CSVs go here
 STATIC_DIR = os.path.join(PROJECT_DIR, "static")
@@ -29,7 +30,7 @@ print(f"Project dir: {PROJECT_DIR}")
 print(f"Looking for ingredients.csv at: {os.path.join(CSV_DIR, 'ingredients.csv')}")
 print(f"Ingredients file exists: {os.path.exists(os.path.join(CSV_DIR, 'ingredients.csv'))}")
 
-# Initialize operations - FIXED: Pass both directories
+# Initialize operations
 csv_handler = CSVHandler(CSV_DIR, DATA_DIR)
 ingredient_ops = IngredientOperations(csv_handler)
 meal_ops = MealOperations(csv_handler)
@@ -90,12 +91,33 @@ def meals():
             return jsonify(meals)
 
         elif request.method == 'POST':
-            """Create new meal"""
+            """Create new meal - UPDATED to handle servings"""
             data = request.json
-            meal = meal_ops.create_meal(data['meal_name'], data['ingredients'])
+            print(f"Create meal request: {data}")
+
+            # Extract required parameters
+            meal_name = data.get('meal_name')
+            servings = data.get('servings', 1)  # Default to 1 if not provided
+            ingredients = data.get('ingredients', [])
+
+            # Validate inputs
+            if not meal_name:
+                return jsonify({'error': 'meal_name is required'}), 400
+            if not ingredients:
+                return jsonify({'error': 'ingredients list is required'}), 400
+            if servings < 1:
+                return jsonify({'error': 'servings must be at least 1'}), 400
+
+            print(f"Creating meal: {meal_name}, servings: {servings}, ingredients: {len(ingredients)}")
+
+            # Create the meal
+            meal = meal_ops.create_meal(meal_name, servings, ingredients)
             return jsonify(meal)
+
     except Exception as e:
         print(f"Error in meals: {e}")
+        import traceback
+        traceback.print_exc()  # Print full traceback for debugging
         return jsonify({'error': str(e)}), 500
 
 

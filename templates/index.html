@@ -1,4 +1,3 @@
-<!-- templates/index.html -->
 {% extends "base.html" %}
 
 {% block title %}Create Meal - Nutrition Planner{% endblock %}
@@ -11,10 +10,17 @@
                 <h3>Create New Meal</h3>
             </div>
             <div class="card-body">
-                <!-- Meal Name Input -->
-                <div class="mb-3">
-                    <label for="mealName" class="form-label">Meal Name</label>
-                    <input type="text" class="form-control" id="mealName" placeholder="Enter meal name">
+                <!-- Meal Name and Servings Inputs -->
+                <div class="row mb-3">
+                    <div class="col-md-8">
+                        <label for="mealName" class="form-label">Meal Name</label>
+                        <input type="text" class="form-control" id="mealName" placeholder="Enter meal name">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="servings" class="form-label">Servings</label>
+                        <input type="number" class="form-control" id="servings"
+                               placeholder="1" min="1" step="1" value="1" onchange="updatePerServingNutrition()">
+                    </div>
                 </div>
 
                 <!-- Ingredient Selection -->
@@ -105,6 +111,8 @@
                 <h4>Nutrition Summary</h4>
             </div>
             <div class="card-body">
+                <!-- Total Nutrition -->
+                <h6 class="text-primary">Total Recipe:</h6>
                 <div class="nutrition-item">
                     <strong>Calories:</strong> <span id="summaryCalories">0</span>
                 </div>
@@ -131,6 +139,37 @@
                 </div>
                 <div class="nutrition-item">
                     <strong>Calcium:</strong> <span id="summaryCalcium">0</span>mg
+                </div>
+
+                <!-- Per Serving Nutrition -->
+                <hr>
+                <h6 class="text-success">Per Serving (<span id="servingCount">1</span> serving):</h6>
+                <div class="nutrition-item">
+                    <strong>Calories:</strong> <span id="servingCalories">0</span>
+                </div>
+                <div class="nutrition-item">
+                    <strong>Protein:</strong> <span id="servingProtein">0</span>g
+                </div>
+                <div class="nutrition-item">
+                    <strong>Total Fat:</strong> <span id="servingFat">0</span>g
+                </div>
+                <div class="nutrition-item">
+                    <strong>Saturated Fat:</strong> <span id="servingSatFat">0</span>g
+                </div>
+                <div class="nutrition-item">
+                    <strong>Carbohydrates:</strong> <span id="servingCarbs">0</span>g
+                </div>
+                <div class="nutrition-item">
+                    <strong>Sugars:</strong> <span id="servingSugars">0</span>g
+                </div>
+                <div class="nutrition-item">
+                    <strong>Dietary Fiber:</strong> <span id="servingFiber">0</span>g
+                </div>
+                <div class="nutrition-item">
+                    <strong>Sodium:</strong> <span id="servingSodium">0</span>mg
+                </div>
+                <div class="nutrition-item">
+                    <strong>Calcium:</strong> <span id="servingCalcium">0</span>mg
                 </div>
             </div>
         </div>

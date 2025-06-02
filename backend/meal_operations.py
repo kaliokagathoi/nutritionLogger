@@ -11,12 +11,15 @@ class MealOperations:
         self.csv_handler = csv_handler
         self.ingredient_ops = IngredientOperations(csv_handler)
 
-    def create_meal(self, meal_name: str, ingredients: List[Dict]) -> Dict:
-        """Create a new meal with list of ingredients and quantities"""
+    def create_meal(self, meal_name: str, servings: int, ingredients: List[Dict]) -> Dict:
+        """Create a new meal with list of ingredients, quantities, and servings"""
         meals_df = self.csv_handler.read_csv(self.csv_handler.meals_file)
 
         # Calculate total nutrition
         total_nutrition = self._calculate_total_nutrition(ingredients)
+
+        # Calculate per-serving nutrition
+        per_serving_nutrition = self._calculate_per_serving_nutrition(total_nutrition, servings)
 
         # Prepare ingredient and quantity lists for storage
         ingredient_names = [ing['name'] for ing in ingredients]
@@ -25,8 +28,10 @@ class MealOperations:
         new_meal = {
             'meal_id': self.csv_handler.get_next_id(meals_df, 'meal_id'),
             'meal_name': meal_name,
+            'servings': servings,
             'ingredients_list': json.dumps(ingredient_names),
             'quantities_list': json.dumps(quantities),
+            # Total nutrition
             'total_calories': total_nutrition['calories'],
             'total_protein': total_nutrition['protein'],
             'total_fat_total': total_nutrition['fat_total'],
@@ -36,6 +41,16 @@ class MealOperations:
             'total_dietary_fibre_g': total_nutrition['dietary_fibre_g'],
             'total_sodium_mg': total_nutrition['sodium_mg'],
             'total_calcium_mg': total_nutrition['calcium_mg'],
+            # Per serving nutrition
+            'calories_per_serving': per_serving_nutrition['calories'],
+            'protein_per_serving': per_serving_nutrition['protein'],
+            'fat_total_per_serving': per_serving_nutrition['fat_total'],
+            'fat_saturated_per_serving': per_serving_nutrition['fat_saturated'],
+            'carbohydrate_per_serving': per_serving_nutrition['carbohydrate'],
+            'sugars_per_serving': per_serving_nutrition['sugars'],
+            'dietary_fibre_per_serving': per_serving_nutrition['dietary_fibre_g'],
+            'sodium_per_serving': per_serving_nutrition['sodium_mg'],
+            'calcium_per_serving': per_serving_nutrition['calcium_mg'],
             'created_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
 
@@ -62,8 +77,10 @@ class MealOperations:
             'meal_time': meal_time,
             'meal_id': meal_id,
             'meal_name': meal['meal_name'],
+            'servings': meal['servings'],
             'ingredients_list': meal['ingredients_list'],
             'quantities_list': meal['quantities_list'],
+            # Total nutrition
             'total_calories': meal['total_calories'],
             'total_protein': meal['total_protein'],
             'total_fat_total': meal['total_fat_total'],
@@ -73,6 +90,16 @@ class MealOperations:
             'total_dietary_fibre_g': meal['total_dietary_fibre_g'],
             'total_sodium_mg': meal['total_sodium_mg'],
             'total_calcium_mg': meal['total_calcium_mg'],
+            # Per serving nutrition
+            'calories_per_serving': meal['calories_per_serving'],
+            'protein_per_serving': meal['protein_per_serving'],
+            'fat_total_per_serving': meal['fat_total_per_serving'],
+            'fat_saturated_per_serving': meal['fat_saturated_per_serving'],
+            'carbohydrate_per_serving': meal['carbohydrate_per_serving'],
+            'sugars_per_serving': meal['sugars_per_serving'],
+            'dietary_fibre_per_serving': meal['dietary_fibre_per_serving'],
+            'sodium_per_serving': meal['sodium_per_serving'],
+            'calcium_per_serving': meal['calcium_per_serving'],
             'notes': notes
         }
 
@@ -112,3 +139,14 @@ class MealOperations:
 
         # Round all values
         return {key: round(value, 2) for key, value in totals.items()}
+
+    def _calculate_per_serving_nutrition(self, total_nutrition: Dict, servings: int) -> Dict:
+        """Calculate per-serving nutrition from total nutrition"""
+        if servings <= 0:
+            servings = 1  # Prevent division by zero
+
+        per_serving = {}
+        for key, value in total_nutrition.items():
+            per_serving[key] = round(value / servings, 2)
+
+        return per_serving

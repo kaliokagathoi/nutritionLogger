@@ -4,13 +4,27 @@ let currentIngredient = null;
 
 // Load ingredients when page loads
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Page loaded, loading ingredients...');
     loadIngredients();
 });
 
 async function loadIngredients() {
     try {
+        console.log('Fetching ingredients from /api/ingredients');
         const response = await fetch('/api/ingredients');
-        ingredients = await response.json();
+
+        console.log('Response status:', response.status);
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const responseText = await response.text();
+        console.log('Raw response:', responseText);
+
+        // Try to parse as JSON
+        ingredients = JSON.parse(responseText);
+        console.log('Parsed ingredients:', ingredients);
 
         const select = document.getElementById('ingredientSelect');
         select.innerHTML = '<option value="">Choose an ingredient...</option>';
@@ -21,7 +35,11 @@ async function loadIngredients() {
             option.textContent = ingredient.name;
             select.appendChild(option);
         });
+
+        console.log(`Loaded ${ingredients.length} ingredients into dropdown`);
+
     } catch (error) {
+        console.error('Error details:', error);
         showMessage('Error loading ingredients: ' + error.message, 'danger');
     }
 }
@@ -139,6 +157,7 @@ function updateIngredientsTable() {
 }
 
 function updateNutritionSummary(totals) {
+    // Update total nutrition
     document.getElementById('summaryCalories').textContent = totals.calories.toFixed(1);
     document.getElementById('summaryProtein').textContent = totals.protein.toFixed(1);
     document.getElementById('summaryFat').textContent = totals.fat_total.toFixed(1);
@@ -148,6 +167,40 @@ function updateNutritionSummary(totals) {
     document.getElementById('summaryFiber').textContent = totals.dietary_fibre_g.toFixed(1);
     document.getElementById('summarySodium').textContent = totals.sodium_mg.toFixed(1);
     document.getElementById('summaryCalcium').textContent = totals.calcium_mg.toFixed(1);
+
+    // Update per-serving nutrition
+    updatePerServingNutrition(totals);
+}
+
+function updatePerServingNutrition(totals = null) {
+    const servings = parseInt(document.getElementById('servings').value) || 1;
+    document.getElementById('servingCount').textContent = servings;
+
+    // If no totals provided, calculate from current values
+    if (!totals) {
+        totals = {
+            calories: parseFloat(document.getElementById('summaryCalories').textContent) || 0,
+            protein: parseFloat(document.getElementById('summaryProtein').textContent) || 0,
+            fat_total: parseFloat(document.getElementById('summaryFat').textContent) || 0,
+            fat_saturated: parseFloat(document.getElementById('summarySatFat').textContent) || 0,
+            carbohydrate: parseFloat(document.getElementById('summaryCarbs').textContent) || 0,
+            sugars: parseFloat(document.getElementById('summarySugars').textContent) || 0,
+            dietary_fibre_g: parseFloat(document.getElementById('summaryFiber').textContent) || 0,
+            sodium_mg: parseFloat(document.getElementById('summarySodium').textContent) || 0,
+            calcium_mg: parseFloat(document.getElementById('summaryCalcium').textContent) || 0
+        };
+    }
+
+    // Calculate per-serving values
+    document.getElementById('servingCalories').textContent = (totals.calories / servings).toFixed(1);
+    document.getElementById('servingProtein').textContent = (totals.protein / servings).toFixed(1);
+    document.getElementById('servingFat').textContent = (totals.fat_total / servings).toFixed(1);
+    document.getElementById('servingSatFat').textContent = (totals.fat_saturated / servings).toFixed(1);
+    document.getElementById('servingCarbs').textContent = (totals.carbohydrate / servings).toFixed(1);
+    document.getElementById('servingSugars').textContent = (totals.sugars / servings).toFixed(1);
+    document.getElementById('servingFiber').textContent = (totals.dietary_fibre_g / servings).toFixed(1);
+    document.getElementById('servingSodium').textContent = (totals.sodium_mg / servings).toFixed(1);
+    document.getElementById('servingCalcium').textContent = (totals.calcium_mg / servings).toFixed(1);
 }
 
 function removeIngredient(index) {
@@ -159,6 +212,7 @@ function removeIngredient(index) {
 function clearMeal() {
     currentMealIngredients = [];
     document.getElementById('mealName').value = '';
+    document.getElementById('servings').value = '1';
     updateIngredientsTable();
     document.getElementById('saveMealBtn').disabled = true;
     showMessage('Meal cleared', 'info');
@@ -166,6 +220,7 @@ function clearMeal() {
 
 async function saveMeal() {
     const mealName = document.getElementById('mealName').value.trim();
+    const servings = parseInt(document.getElementById('servings').value) || 1;
 
     if (!mealName) {
         showMessage('Please enter a meal name', 'warning');
@@ -177,6 +232,11 @@ async function saveMeal() {
         return;
     }
 
+    if (servings < 1) {
+        showMessage('Servings must be at least 1', 'warning');
+        return;
+    }
+
     try {
         const response = await fetch('/api/meals', {
             method: 'POST',
@@ -185,6 +245,7 @@ async function saveMeal() {
             },
             body: JSON.stringify({
                 meal_name: mealName,
+                servings: servings,
                 ingredients: currentMealIngredients
             })
         });
@@ -192,7 +253,7 @@ async function saveMeal() {
         const result = await response.json();
 
         if (response.ok) {
-            showMessage(`Meal "${mealName}" saved successfully!`, 'success');
+            showMessage(`Meal "${mealName}" saved successfully with ${servings} serving(s)!`, 'success');
             clearMeal();
         } else {
             showMessage('Error saving meal: ' + result.error, 'danger');
