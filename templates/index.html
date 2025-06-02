@@ -1,0 +1,142 @@
+<!-- templates/index.html -->
+{% extends "base.html" %}
+
+{% block title %}Create Meal - Nutrition Planner{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h3>Create New Meal</h3>
+            </div>
+            <div class="card-body">
+                <!-- Meal Name Input -->
+                <div class="mb-3">
+                    <label for="mealName" class="form-label">Meal Name</label>
+                    <input type="text" class="form-control" id="mealName" placeholder="Enter meal name">
+                </div>
+
+                <!-- Ingredient Selection -->
+                <div class="row mb-3">
+                    <div class="col-md-5">
+                        <label for="ingredientSelect" class="form-label">Select Ingredient</label>
+                        <select class="form-select" id="ingredientSelect" onchange="onIngredientSelect()">
+                            <option value="">Choose an ingredient...</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Unit</label>
+                        <div id="unitDisplay" class="form-control-plaintext text-muted">
+                            Select ingredient first
+                        </div>
+                    </div>
+                    <div class="col-md-2">
+                        <label for="quantityInput" class="form-label">Quantity</label>
+                        <input type="number" class="form-control" id="quantityInput"
+                               placeholder="0" step="0.1" min="0">
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="button" class="btn btn-success w-100"
+                                onclick="addIngredient()" id="addIngredientBtn" disabled>
+                            Add Ingredient
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Current Meal Ingredients Table -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h4>Current Meal Ingredients</h4>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped" id="ingredientsTable">
+                        <thead>
+                            <tr>
+                                <th>Ingredient</th>
+                                <th>Quantity</th>
+                                <th>Calories</th>
+                                <th>Protein (g)</th>
+                                <th>Fat (g)</th>
+                                <th>Carbs (g)</th>
+                                <th>Fiber (g)</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ingredientsTableBody">
+                            <!-- Ingredients will be added here -->
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-dark">
+                                <th>TOTAL</th>
+                                <th id="totalQuantity">-</th>
+                                <th id="totalCalories">0</th>
+                                <th id="totalProtein">0</th>
+                                <th id="totalFat">0</th>
+                                <th id="totalCarbs">0</th>
+                                <th id="totalFiber">0</th>
+                                <th></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <div class="mt-3">
+                    <button type="button" class="btn btn-primary btn-lg"
+                            onclick="saveMeal()" id="saveMealBtn" disabled>
+                        Save Meal
+                    </button>
+                    <button type="button" class="btn btn-secondary"
+                            onclick="clearMeal()">
+                        Clear All
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Nutrition Summary Sidebar -->
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h4>Nutrition Summary</h4>
+            </div>
+            <div class="card-body">
+                <div class="nutrition-item">
+                    <strong>Calories:</strong> <span id="summaryCalories">0</span>
+                </div>
+                <div class="nutrition-item">
+                    <strong>Protein:</strong> <span id="summaryProtein">0</span>g
+                </div>
+                <div class="nutrition-item">
+                    <strong>Total Fat:</strong> <span id="summaryFat">0</span>g
+                </div>
+                <div class="nutrition-item">
+                    <strong>Saturated Fat:</strong> <span id="summarySatFat">0</span>g
+                </div>
+                <div class="nutrition-item">
+                    <strong>Carbohydrates:</strong> <span id="summaryCarbs">0</span>g
+                </div>
+                <div class="nutrition-item">
+                    <strong>Sugars:</strong> <span id="summarySugars">0</span>g
+                </div>
+                <div class="nutrition-item">
+                    <strong>Dietary Fiber:</strong> <span id="summaryFiber">0</span>g
+                </div>
+                <div class="nutrition-item">
+                    <strong>Sodium:</strong> <span id="summarySodium">0</span>mg
+                </div>
+                <div class="nutrition-item">
+                    <strong>Calcium:</strong> <span id="summaryCalcium">0</span>mg
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Success/Error Messages -->
+<div id="messageArea"></div>
+{% endblock %}

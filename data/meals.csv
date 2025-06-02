@@ -1,0 +1,2 @@
+meal_id,meal_name,ingredients_list,quantities_list,total_calories,total_protein,total_fat_total,total_fat_saturated,total_carbohydrate,total_sugars,total_dietary_fibre_g,total_sodium_mg,total_calcium_mg,created_date
+1,SpagBol,"[""Fettuccine Zafarelli"", ""Passata Pomodora La Molisana"", ""Beef Mince Extra Lean""]","[400, 650, 500]",2247.27,156.45,33.65,13.0,312.4,38.4,16.0,1460.0,0.0,2025-06-02 22:36:13

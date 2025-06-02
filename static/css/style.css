@@ -1,0 +1,48 @@
+body {
+    background-color: #f8f9fa;
+}
+
+.nutrition-item {
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.nutrition-item:last-child {
+    border-bottom: none;
+}
+
+#ingredientsTable {
+    font-size: 0.9em;
+}
+
+#ingredientsTable th {
+    background-color: #e9ecef;
+    font-weight: 600;
+}
+
+.table-responsive {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.btn-remove {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+}
+
+#unitDisplay {
+    background-color: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    font-style: italic;
+}
+
+.alert {
+    margin-top: 1rem;
+}

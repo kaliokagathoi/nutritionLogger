@@ -1,0 +1,122 @@
+from flask import Flask, render_template, request, jsonify
+import os
+import sys
+
+# Add backend to Python path
+PROJECT_DIR = r"C:\Users\tomco\Documents\Projects\el_plan"
+sys.path.append(os.path.join(PROJECT_DIR, 'backend'))
+
+from csv_handler import CSVHandler
+from ingredient_operations import IngredientOperations
+from meal_operations import MealOperations
+
+app = Flask(__name__)
+
+# Configuration - fix the paths
+CSV_DIR = PROJECT_DIR  # ingredients.csv is in main folder
+DATA_DIR = os.path.join(PROJECT_DIR, "data")  # generated CSVs go here
+STATIC_DIR = os.path.join(PROJECT_DIR, "static")
+TEMPLATES_DIR = os.path.join(PROJECT_DIR, "templates")
+
+# Ensure data directory exists
+os.makedirs(DATA_DIR, exist_ok=True)
+
+# Set template and static folders
+app.template_folder = TEMPLATES_DIR
+app.static_folder = STATIC_DIR
+
+print(f"Project dir: {PROJECT_DIR}")
+print(f"Looking for ingredients.csv at: {os.path.join(CSV_DIR, 'ingredients.csv')}")
+print(f"Ingredients file exists: {os.path.exists(os.path.join(CSV_DIR, 'ingredients.csv'))}")
+
+# Initialize operations - FIXED: Pass both directories
+csv_handler = CSVHandler(CSV_DIR, DATA_DIR)
+ingredient_ops = IngredientOperations(csv_handler)
+meal_ops = MealOperations(csv_handler)
+
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+
+@app.route('/api/ingredients')
+def get_ingredients():
+    """Get all ingredients for dropdown"""
+    try:
+        print("API call: /api/ingredients")
+        ingredients = ingredient_ops.get_all_ingredients()
+        print(f"Found {len(ingredients)} ingredients")
+        if len(ingredients) > 0:
+            print(f"First ingredient: {ingredients[0]}")
+        return jsonify(ingredients)
+    except Exception as e:
+        print(f"Error in get_ingredients: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/ingredient/<name>')
+def get_ingredient(name):
+    """Get specific ingredient details"""
+    try:
+        ingredient = ingredient_ops.get_ingredient_by_name(name)
+        if ingredient:
+            return jsonify(ingredient)
+        return jsonify({'error': 'Ingredient not found'}), 404
+    except Exception as e:
+        print(f"Error in get_ingredient: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/calculate-nutrition', methods=['POST'])
+def calculate_nutrition():
+    """Calculate nutrition for ingredient and quantity"""
+    try:
+        data = request.json
+        print(f"Calculate nutrition request: {data}")
+        nutrition = ingredient_ops.calculate_nutrition(data['name'], data['quantity'])
+        return jsonify(nutrition)
+    except Exception as e:
+        print(f"Error in calculate_nutrition: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/meals', methods=['GET', 'POST'])
+def meals():
+    try:
+        if request.method == 'GET':
+            """Get all meals"""
+            meals = meal_ops.get_all_meals()
+            return jsonify(meals)
+
+        elif request.method == 'POST':
+            """Create new meal"""
+            data = request.json
+            meal = meal_ops.create_meal(data['meal_name'], data['ingredients'])
+            return jsonify(meal)
+    except Exception as e:
+        print(f"Error in meals: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/log-meal', methods=['POST'])
+def log_meal():
+    """Log a meal consumption"""
+    try:
+        data = request.json
+        log = meal_ops.log_meal(
+            data['meal_id'],
+            data['meal_time'],
+            data.get('date'),
+            data.get('notes', '')
+        )
+        return jsonify(log)
+    except Exception as e:
+        print(f"Error in log_meal: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+if __name__ == '__main__':
+    print("Starting Nutrition & Meal Planning App...")
+    print("Visit: http://localhost:5000")
+    app.run(debug=True, host='localhost', port=5000)
