@@ -54,13 +54,44 @@ class MealOperations:
             'created_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
 
+        # ONLY add servings_remaining for NEW meals (check if column exists)
+        if 'servings_remaining' in meals_df.columns or meals_df.empty:
+            new_meal['servings_remaining'] = servings
+
         meals_df = pd.concat([meals_df, pd.DataFrame([new_meal])], ignore_index=True)
         self.csv_handler.write_csv(meals_df, self.csv_handler.meals_file)
 
         return new_meal
 
-    def log_meal(self, meal_id: int, meal_time: str, date: str = None, notes: str = "") -> Dict:
-        """Log a meal consumption"""
+    def update_servings_remaining(self, meal_id: int, servings_consumed: int) -> bool:
+        """Decrease servings_remaining when a meal is logged (only if column exists)"""
+        meals_df = self.csv_handler.read_csv(self.csv_handler.meals_file)
+        if meals_df.empty:
+            return False
+
+        # Only update if servings_remaining column exists
+        if 'servings_remaining' not in meals_df.columns:
+            print(f"servings_remaining column not found in meals.csv - skipping update")
+            return False
+
+        mask = meals_df['meal_id'] == meal_id
+        if not mask.any():
+            return False
+
+        # Get current servings remaining
+        current_remaining = meals_df.loc[mask, 'servings_remaining'].iloc[0]
+        new_remaining = max(0, current_remaining - servings_consumed)  # Don't go below 0
+
+        # Update the dataframe
+        meals_df.loc[mask, 'servings_remaining'] = new_remaining
+        self.csv_handler.write_csv(meals_df, self.csv_handler.meals_file)
+
+        print(f"Updated meal {meal_id}: {current_remaining} -> {new_remaining} servings remaining")
+        return True
+
+    def log_meal(self, meal_id: int, meal_time: str, servings_consumed: int = 1, date: str = None,
+                 notes: str = "") -> Dict:
+        """Log a meal consumption and update servings_remaining if applicable"""
         if date is None:
             date = datetime.now().strftime('%Y-%m-%d')
 
@@ -68,6 +99,14 @@ class MealOperations:
         meal = self.get_meal_by_id(meal_id)
         if not meal:
             raise ValueError(f"Meal with ID {meal_id} not found")
+
+        # Check servings remaining only if the column exists
+        if 'servings_remaining' in meal:
+            servings_remaining = meal.get('servings_remaining', meal.get('servings', 1))
+            if servings_consumed > servings_remaining:
+                raise ValueError(f"Cannot consume {servings_consumed} servings. Only {servings_remaining} remaining.")
+        else:
+            servings_remaining = meal.get('servings', 1)  # Fallback for old meals
 
         meal_log_df = self.csv_handler.read_csv(self.csv_handler.meal_log_file)
 
@@ -103,8 +142,20 @@ class MealOperations:
             'notes': notes
         }
 
+        # ONLY add servings_remaining to log if column exists in meal_log.csv
+        if 'servings_remaining' in meal_log_df.columns or meal_log_df.empty:
+            if 'servings_remaining' in meal:
+                new_log['servings_remaining'] = servings_remaining - servings_consumed
+            else:
+                new_log['servings_remaining'] = servings_remaining  # No change for old meals
+
+        # Add to log
         meal_log_df = pd.concat([meal_log_df, pd.DataFrame([new_log])], ignore_index=True)
         self.csv_handler.write_csv(meal_log_df, self.csv_handler.meal_log_file)
+
+        # Update servings remaining in meals table (only if column exists)
+        if 'servings_remaining' in meal:
+            self.update_servings_remaining(meal_id, servings_consumed)
 
         return new_log
 
@@ -112,6 +163,21 @@ class MealOperations:
         """Get all created meals"""
         meals_df = self.csv_handler.read_csv(self.csv_handler.meals_file)
         return meals_df.to_dict('records')
+
+    def get_meals_with_remaining_servings(self) -> List[Dict]:
+        """Get only meals that have servings remaining (only if column exists)"""
+        meals_df = self.csv_handler.read_csv(self.csv_handler.meals_file)
+        if meals_df.empty:
+            return []
+
+        # Only filter by servings_remaining if column exists
+        if 'servings_remaining' in meals_df.columns:
+            remaining_meals = meals_df[meals_df['servings_remaining'] > 0]
+        else:
+            # For backward compatibility, return all meals if no servings_remaining column
+            remaining_meals = meals_df
+
+        return remaining_meals.to_dict('records')
 
     def get_meal_by_id(self, meal_id: int) -> Optional[Dict]:
         """Get specific meal by ID"""

@@ -120,6 +120,15 @@ def meals():
         traceback.print_exc()  # Print full traceback for debugging
         return jsonify({'error': str(e)}), 500
 
+@app.route('/api/meals/available')
+def get_available_meals():
+    """Get only meals that have servings remaining"""
+    try:
+        meals = meal_ops.get_meals_with_remaining_servings()
+        return jsonify(meals)
+    except Exception as e:
+        print(f"Error in get_available_meals: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/api/log-meal', methods=['POST'])
 def log_meal():

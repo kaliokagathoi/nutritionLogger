@@ -19,10 +19,10 @@ class CSVHandler:
     def _initialize_csv_files(self):
         """Create meal CSV files if they don't exist (ingredients.csv already exists)"""
 
-        # Meals database - stores created meal recipes (UPDATED with servings)
+        # Meals database - stores created meal recipes (ONLY create new files with servings_remaining)
         if not os.path.exists(self.meals_file):
             meals_df = pd.DataFrame(columns=[
-                'meal_id', 'meal_name', 'servings', 'ingredients_list', 'quantities_list',
+                'meal_id', 'meal_name', 'servings', 'servings_remaining', 'ingredients_list', 'quantities_list',
                 # Total nutrition
                 'total_calories', 'total_protein', 'total_fat_total', 'total_fat_saturated',
                 'total_carbohydrate', 'total_sugars', 'total_dietary_fibre_g',
@@ -34,11 +34,13 @@ class CSVHandler:
                 'created_date'
             ])
             meals_df.to_csv(self.meals_file, index=False)
+            print(f"Created new meals.csv with servings_remaining column")
+        # NOTE: If meals.csv already exists, we DON'T modify it
 
-        # Meal log - logs when meals are consumed (UPDATED with servings)
+        # Meal log - logs when meals are consumed (ONLY create new files with servings_remaining)
         if not os.path.exists(self.meal_log_file):
             meal_log_df = pd.DataFrame(columns=[
-                'log_id', 'date', 'meal_time', 'meal_id', 'meal_name', 'servings',
+                'log_id', 'date', 'meal_time', 'meal_id', 'meal_name', 'servings', 'servings_remaining',
                 'ingredients_list', 'quantities_list',
                 # Total nutrition
                 'total_calories', 'total_protein', 'total_fat_total', 'total_fat_saturated',
@@ -51,6 +53,8 @@ class CSVHandler:
                 'notes'
             ])
             meal_log_df.to_csv(self.meal_log_file, index=False)
+            print(f"Created new meal_log.csv with servings_remaining column")
+        # NOTE: If meal_log.csv already exists, we DON'T modify it
 
     def read_csv(self, file_path: str) -> pd.DataFrame:
         """Safely read CSV file"""
