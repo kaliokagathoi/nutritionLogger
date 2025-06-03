@@ -1,4 +1,3 @@
-
 from flask import Flask, render_template, request, jsonify
 import os
 import sys
@@ -39,6 +38,12 @@ meal_ops = MealOperations(csv_handler)
 @app.route('/')
 def index():
     return render_template('index.html')
+
+
+@app.route('/daily-nutrition')
+def daily_nutrition():
+    """Daily nutrition tracking page"""
+    return render_template('daily_nutrition.html')
 
 
 @app.route('/api/ingredients')
@@ -120,15 +125,50 @@ def meals():
         traceback.print_exc()  # Print full traceback for debugging
         return jsonify({'error': str(e)}), 500
 
-@app.route('/api/meals/available')
-def get_available_meals():
-    """Get only meals that have servings remaining"""
+
+@app.route('/api/daily-nutrition/<date>', methods=['GET', 'POST', 'DELETE'])
+def daily_nutrition_api(date):
+    """API endpoints for daily nutrition tracking"""
     try:
-        meals = meal_ops.get_meals_with_remaining_servings()
-        return jsonify(meals)
+        if request.method == 'GET':
+            """Get all meals logged for a specific date"""
+            daily_meals = meal_ops.get_daily_nutrition(date)
+            return jsonify(daily_meals)
+
+        elif request.method == 'POST':
+            """Add a meal to a specific date"""
+            data = request.json
+            meal_id = data.get('meal_id')
+            servings = data.get('servings', 1)
+
+            if not meal_id:
+                return jsonify({'error': 'meal_id is required'}), 400
+
+            daily_entry = meal_ops.add_meal_to_daily_nutrition(date, meal_id, servings)
+            return jsonify(daily_entry)
+
+        elif request.method == 'DELETE':
+            """Clear all meals for a specific date"""
+            meal_ops.clear_daily_nutrition(date)
+            return jsonify({'message': f'Daily nutrition cleared for {date}'})
+
     except Exception as e:
-        print(f"Error in get_available_meals: {e}")
+        print(f"Error in daily_nutrition_api: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/daily-nutrition/<date>/entry/<int:entry_id>', methods=['DELETE'])
+def remove_daily_nutrition_entry(date, entry_id):
+    """Remove a specific meal entry from daily nutrition"""
+    try:
+        meal_ops.remove_daily_nutrition_entry(date, entry_id)
+        return jsonify({'message': 'Entry removed successfully'})
+    except Exception as e:
+        print(f"Error removing daily nutrition entry: {e}")
+        return jsonify({'error': str(e)}), 500
+
 
 @app.route('/api/log-meal', methods=['POST'])
 def log_meal():

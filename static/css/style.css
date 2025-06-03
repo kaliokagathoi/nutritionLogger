@@ -11,11 +11,25 @@ body {
     border-bottom: none;
 }
 
-#ingredientsTable {
+.nutrition-goal {
+    padding: 12px 0;
+    border-bottom: 1px solid #eee;
+}
+
+.nutrition-goal:last-child {
+    border-bottom: none;
+}
+
+.nutrition-goal .target {
+    color: #6c757d;
+    font-weight: normal;
+}
+
+#ingredientsTable, #dailyNutritionTable {
     font-size: 0.9em;
 }
 
-#ingredientsTable th {
+#ingredientsTable th, #dailyNutritionTable th {
     background-color: #e9ecef;
     font-weight: 600;
 }
@@ -45,4 +59,58 @@ body {
 
 .alert {
     margin-top: 1rem;
+}
+
+/* Daily Nutrition specific styles */
+.progress {
+    height: 8px;
+    background-color: #f8f9fa;
+}
+
+.progress-bar {
+    transition: width 0.3s ease;
+}
+
+#mealPreview {
+    transition: all 0.3s ease;
+}
+
+#dailyNutritionTable .btn-sm {
+    padding: 0.2rem 0.4rem;
+    font-size: 0.8rem;
+}
+
+.nutrition-goal small {
+    font-size: 0.8em;
+    color: #6c757d;
+}
+
+/* Date picker styling */
+#selectedDate {
+    cursor: pointer;
+}
+
+/* Meal preview card */
+#mealPreview .card-body {
+    padding: 1rem;
+}
+
+#mealPreview h6 {
+    color: #0d6efd;
+    margin-bottom: 0.75rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    #dailyNutritionTable {
+        font-size: 0.8em;
+    }
+
+    .nutrition-goal {
+        padding: 8px 0;
+    }
+
+    .card-body {
+        padding: 1rem 0.75rem;
+    }
 }

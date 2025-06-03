@@ -1,0 +1,4 @@
+entry_id,date,meal_id,meal_name,servings_consumed,calories_consumed,protein_consumed,fat_total_consumed,fat_saturated_consumed,carbohydrate_consumed,sugars_consumed,dietary_fibre_consumed,sodium_consumed,calcium_consumed,added_timestamp
+1,2025-06-03,1,Chicken Fettucine,1,567.38,48.99,11.55,7.15,64.95,4.65,7.8,362.5,0.0,2025-06-03 10:56:01
+3,2025-06-03,3,Breakfast Yoghurt,1,374.4,11.25,23.5,15.25,29.67,29.53,0.0,145.17,405.0,2025-06-03 10:56:51
+4,2025-06-03,2,Mexican Rolls,2,962.06,65.74,36.06,10.34,84.94,5.14,15.6,2784.4,0.0,2025-06-03 10:57:16

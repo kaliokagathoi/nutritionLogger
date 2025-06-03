@@ -2,6 +2,7 @@ from csv_handler import CSVHandler
 from ingredient_operations import IngredientOperations
 import pandas as pd
 import json
+import os
 from datetime import datetime
 from typing import Dict, List, Optional
 
@@ -10,6 +11,23 @@ class MealOperations:
     def __init__(self, csv_handler: CSVHandler):
         self.csv_handler = csv_handler
         self.ingredient_ops = IngredientOperations(csv_handler)
+
+        # Daily nutrition file path
+        self.daily_nutrition_file = os.path.join(csv_handler.data_dir, "daily_nutrition.csv")
+        self._initialize_daily_nutrition_file()
+
+    def _initialize_daily_nutrition_file(self):
+        """Create daily nutrition CSV file if it doesn't exist"""
+        import os
+        if not os.path.exists(self.daily_nutrition_file):
+            daily_nutrition_df = pd.DataFrame(columns=[
+                'entry_id', 'date', 'meal_id', 'meal_name', 'servings_consumed',
+                'calories_consumed', 'protein_consumed', 'fat_total_consumed',
+                'fat_saturated_consumed', 'carbohydrate_consumed', 'sugars_consumed',
+                'dietary_fibre_consumed', 'sodium_consumed', 'calcium_consumed',
+                'added_timestamp'
+            ])
+            daily_nutrition_df.to_csv(self.daily_nutrition_file, index=False)
 
     def create_meal(self, meal_name: str, servings: int, ingredients: List[Dict]) -> Dict:
         """Create a new meal with list of ingredients, quantities, and servings"""
@@ -54,44 +72,79 @@ class MealOperations:
             'created_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         }
 
-        # ONLY add servings_remaining for NEW meals (check if column exists)
-        if 'servings_remaining' in meals_df.columns or meals_df.empty:
-            new_meal['servings_remaining'] = servings
-
         meals_df = pd.concat([meals_df, pd.DataFrame([new_meal])], ignore_index=True)
         self.csv_handler.write_csv(meals_df, self.csv_handler.meals_file)
 
         return new_meal
 
-    def update_servings_remaining(self, meal_id: int, servings_consumed: int) -> bool:
-        """Decrease servings_remaining when a meal is logged (only if column exists)"""
-        meals_df = self.csv_handler.read_csv(self.csv_handler.meals_file)
-        if meals_df.empty:
-            return False
+    def add_meal_to_daily_nutrition(self, date: str, meal_id: int, servings_consumed: float) -> Dict:
+        """Add a meal to daily nutrition tracking"""
+        # Get meal details
+        meal = self.get_meal_by_id(meal_id)
+        if not meal:
+            raise ValueError(f"Meal with ID {meal_id} not found")
 
-        # Only update if servings_remaining column exists
-        if 'servings_remaining' not in meals_df.columns:
-            print(f"servings_remaining column not found in meals.csv - skipping update")
-            return False
+        daily_nutrition_df = self.csv_handler.read_csv(self.daily_nutrition_file)
 
-        mask = meals_df['meal_id'] == meal_id
-        if not mask.any():
-            return False
+        # Calculate nutrition for consumed servings
+        consumed_nutrition = self._calculate_consumed_nutrition(meal, servings_consumed)
 
-        # Get current servings remaining
-        current_remaining = meals_df.loc[mask, 'servings_remaining'].iloc[0]
-        new_remaining = max(0, current_remaining - servings_consumed)  # Don't go below 0
+        new_entry = {
+            'entry_id': self.csv_handler.get_next_id(daily_nutrition_df, 'entry_id'),
+            'date': date,
+            'meal_id': meal_id,
+            'meal_name': meal['meal_name'],
+            'servings_consumed': servings_consumed,
+            'calories_consumed': consumed_nutrition['calories'],
+            'protein_consumed': consumed_nutrition['protein'],
+            'fat_total_consumed': consumed_nutrition['fat_total'],
+            'fat_saturated_consumed': consumed_nutrition['fat_saturated'],
+            'carbohydrate_consumed': consumed_nutrition['carbohydrate'],
+            'sugars_consumed': consumed_nutrition['sugars'],
+            'dietary_fibre_consumed': consumed_nutrition['dietary_fibre_g'],
+            'sodium_consumed': consumed_nutrition['sodium_mg'],
+            'calcium_consumed': consumed_nutrition['calcium_mg'],
+            'added_timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        }
 
-        # Update the dataframe
-        meals_df.loc[mask, 'servings_remaining'] = new_remaining
-        self.csv_handler.write_csv(meals_df, self.csv_handler.meals_file)
+        daily_nutrition_df = pd.concat([daily_nutrition_df, pd.DataFrame([new_entry])], ignore_index=True)
+        self.csv_handler.write_csv(daily_nutrition_df, self.daily_nutrition_file)
 
-        print(f"Updated meal {meal_id}: {current_remaining} -> {new_remaining} servings remaining")
-        return True
+        return new_entry
 
-    def log_meal(self, meal_id: int, meal_time: str, servings_consumed: int = 1, date: str = None,
-                 notes: str = "") -> Dict:
-        """Log a meal consumption and update servings_remaining if applicable"""
+    def get_daily_nutrition(self, date: str) -> List[Dict]:
+        """Get all nutrition entries for a specific date"""
+        daily_nutrition_df = self.csv_handler.read_csv(self.daily_nutrition_file)
+        if daily_nutrition_df.empty:
+            return []
+
+        day_entries = daily_nutrition_df[daily_nutrition_df['date'] == date]
+        return day_entries.to_dict('records')
+
+    def remove_daily_nutrition_entry(self, date: str, entry_id: int):
+        """Remove a specific entry from daily nutrition"""
+        daily_nutrition_df = self.csv_handler.read_csv(self.daily_nutrition_file)
+        if daily_nutrition_df.empty:
+            return
+
+        # Remove the entry
+        daily_nutrition_df = daily_nutrition_df[
+            ~((daily_nutrition_df['date'] == date) & (daily_nutrition_df['entry_id'] == entry_id))
+        ]
+        self.csv_handler.write_csv(daily_nutrition_df, self.daily_nutrition_file)
+
+    def clear_daily_nutrition(self, date: str):
+        """Clear all nutrition entries for a specific date"""
+        daily_nutrition_df = self.csv_handler.read_csv(self.daily_nutrition_file)
+        if daily_nutrition_df.empty:
+            return
+
+        # Remove all entries for the date
+        daily_nutrition_df = daily_nutrition_df[daily_nutrition_df['date'] != date]
+        self.csv_handler.write_csv(daily_nutrition_df, self.daily_nutrition_file)
+
+    def log_meal(self, meal_id: int, meal_time: str, date: str = None, notes: str = "") -> Dict:
+        """Log a meal consumption"""
         if date is None:
             date = datetime.now().strftime('%Y-%m-%d')
 
@@ -99,14 +152,6 @@ class MealOperations:
         meal = self.get_meal_by_id(meal_id)
         if not meal:
             raise ValueError(f"Meal with ID {meal_id} not found")
-
-        # Check servings remaining only if the column exists
-        if 'servings_remaining' in meal:
-            servings_remaining = meal.get('servings_remaining', meal.get('servings', 1))
-            if servings_consumed > servings_remaining:
-                raise ValueError(f"Cannot consume {servings_consumed} servings. Only {servings_remaining} remaining.")
-        else:
-            servings_remaining = meal.get('servings', 1)  # Fallback for old meals
 
         meal_log_df = self.csv_handler.read_csv(self.csv_handler.meal_log_file)
 
@@ -142,20 +187,8 @@ class MealOperations:
             'notes': notes
         }
 
-        # ONLY add servings_remaining to log if column exists in meal_log.csv
-        if 'servings_remaining' in meal_log_df.columns or meal_log_df.empty:
-            if 'servings_remaining' in meal:
-                new_log['servings_remaining'] = servings_remaining - servings_consumed
-            else:
-                new_log['servings_remaining'] = servings_remaining  # No change for old meals
-
-        # Add to log
         meal_log_df = pd.concat([meal_log_df, pd.DataFrame([new_log])], ignore_index=True)
         self.csv_handler.write_csv(meal_log_df, self.csv_handler.meal_log_file)
-
-        # Update servings remaining in meals table (only if column exists)
-        if 'servings_remaining' in meal:
-            self.update_servings_remaining(meal_id, servings_consumed)
 
         return new_log
 
@@ -163,21 +196,6 @@ class MealOperations:
         """Get all created meals"""
         meals_df = self.csv_handler.read_csv(self.csv_handler.meals_file)
         return meals_df.to_dict('records')
-
-    def get_meals_with_remaining_servings(self) -> List[Dict]:
-        """Get only meals that have servings remaining (only if column exists)"""
-        meals_df = self.csv_handler.read_csv(self.csv_handler.meals_file)
-        if meals_df.empty:
-            return []
-
-        # Only filter by servings_remaining if column exists
-        if 'servings_remaining' in meals_df.columns:
-            remaining_meals = meals_df[meals_df['servings_remaining'] > 0]
-        else:
-            # For backward compatibility, return all meals if no servings_remaining column
-            remaining_meals = meals_df
-
-        return remaining_meals.to_dict('records')
 
     def get_meal_by_id(self, meal_id: int) -> Optional[Dict]:
         """Get specific meal by ID"""
@@ -216,3 +234,26 @@ class MealOperations:
             per_serving[key] = round(value / servings, 2)
 
         return per_serving
+
+    def _calculate_consumed_nutrition(self, meal: Dict, servings_consumed: float) -> Dict:
+        """Calculate nutrition for consumed servings of a meal"""
+        consumed_nutrition = {}
+
+        # Per-serving nutrition fields in the meal dict
+        per_serving_fields = {
+            'calories': 'calories_per_serving',
+            'protein': 'protein_per_serving',
+            'fat_total': 'fat_total_per_serving',
+            'fat_saturated': 'fat_saturated_per_serving',
+            'carbohydrate': 'carbohydrate_per_serving',
+            'sugars': 'sugars_per_serving',
+            'dietary_fibre_g': 'dietary_fibre_per_serving',
+            'sodium_mg': 'sodium_per_serving',
+            'calcium_mg': 'calcium_per_serving'
+        }
+
+        for key, field in per_serving_fields.items():
+            per_serving_value = meal.get(field, 0)
+            consumed_nutrition[key] = round(per_serving_value * servings_consumed, 2)
+
+        return consumed_nutrition
