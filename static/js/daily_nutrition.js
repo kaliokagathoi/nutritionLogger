@@ -45,7 +45,23 @@ function updateMealsDropdown() {
     meals.forEach(meal => {
         const option = document.createElement('option');
         option.value = meal.meal_id;
-        option.textContent = `${meal.meal_name} (${meal.servings} servings)`;
+
+        // Show remaining servings if available
+        let displayText = meal.meal_name;
+        if (meal.servings_remaining !== null && meal.servings_remaining !== undefined) {
+            const remaining = parseFloat(meal.servings_remaining);
+            displayText += ` (${remaining} remaining of ${meal.servings})`;
+
+            // Disable option if no servings remaining
+            if (remaining <= 0) {
+                option.disabled = true;
+                displayText += ' - EMPTY';
+            }
+        } else {
+            displayText += ` (${meal.servings} servings)`;
+        }
+
+        option.textContent = displayText;
         select.appendChild(option);
     });
 }
@@ -84,6 +100,30 @@ function updateMealPreview() {
     document.getElementById('previewCarbs').textContent = selectedMeal.carbohydrate_per_serving || 0;
     document.getElementById('previewServings').textContent = selectedMeal.servings || 1;
 
+    // Show remaining servings if available
+    const remainingElement = document.getElementById('previewServingsRemaining');
+    const remainingContainer = document.getElementById('previewRemaining');
+
+    if (selectedMeal.servings_remaining !== null && selectedMeal.servings_remaining !== undefined) {
+        const remaining = parseFloat(selectedMeal.servings_remaining);
+        remainingElement.textContent = remaining;
+
+        // Color code based on availability
+        if (remaining <= 0) {
+            remainingContainer.className = 'text-danger';
+            remainingContainer.innerHTML = 'Remaining: <span id="previewServingsRemaining">0 - EMPTY</span>';
+        } else if (remaining <= 1) {
+            remainingContainer.className = 'text-warning';
+            remainingContainer.innerHTML = 'Remaining: <span id="previewServingsRemaining">' + remaining + ' - LOW</span>';
+        } else {
+            remainingContainer.className = 'text-success';
+            remainingContainer.innerHTML = 'Remaining: <span id="previewServingsRemaining">' + remaining + '</span>';
+        }
+    } else {
+        remainingContainer.className = 'text-muted';
+        remainingContainer.innerHTML = 'Remaining: <span id="previewServingsRemaining">Not tracked (old meal)</span>';
+    }
+
     document.getElementById('mealPreview').style.display = 'block';
 }
 
@@ -98,6 +138,15 @@ async function addMealToDay() {
     if (servings <= 0) {
         showMessage('Servings must be greater than 0', 'warning');
         return;
+    }
+
+    // Check if enough servings are available (for meals with tracking)
+    if (selectedMeal.servings_remaining !== null && selectedMeal.servings_remaining !== undefined) {
+        const available = parseFloat(selectedMeal.servings_remaining);
+        if (servings > available) {
+            showMessage(`Not enough servings available. Requested: ${servings}, Available: ${available}`, 'danger');
+            return;
+        }
     }
 
     try {
@@ -124,7 +173,8 @@ async function addMealToDay() {
             document.getElementById('mealPreview').style.display = 'none';
             selectedMeal = null;
 
-            // Reload daily nutrition
+            // Reload meals and daily nutrition to show updated remaining servings
+            await loadMeals();
             await loadDailyNutrition();
 
         } else {
@@ -228,7 +278,7 @@ function updateNutritionGoals() {
 
     // Daily goals (these could be made configurable)
     const goals = {
-        calories: 2000,
+        calories: 2500,
         protein: 150,
         fat: 65,
         carbs: 250,
@@ -275,6 +325,8 @@ async function removeDailyNutritionEntry(entryId) {
 
         if (response.ok) {
             showMessage('Meal removed from daily nutrition', 'info');
+            // Reload both meals and daily nutrition to show updated remaining servings
+            await loadMeals();
             await loadDailyNutrition();
         } else {
             const result = await response.json();
@@ -298,6 +350,8 @@ async function clearDay() {
 
         if (response.ok) {
             showMessage(`Cleared all meals for ${currentDate}`, 'info');
+            // Reload both meals and daily nutrition to show updated remaining servings
+            await loadMeals();
             await loadDailyNutrition();
         } else {
             const result = await response.json();

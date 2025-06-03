@@ -16,6 +16,9 @@ class MealOperations:
         self.daily_nutrition_file = os.path.join(csv_handler.data_dir, "daily_nutrition.csv")
         self._initialize_daily_nutrition_file()
 
+        # Ensure servings_remaining column exists in meals.csv
+        self.csv_handler.ensure_servings_remaining_column()
+
     def _initialize_daily_nutrition_file(self):
         """Create daily nutrition CSV file if it doesn't exist"""
         import os
@@ -47,6 +50,7 @@ class MealOperations:
             'meal_id': self.csv_handler.get_next_id(meals_df, 'meal_id'),
             'meal_name': meal_name,
             'servings': servings,
+            'servings_remaining': servings,  # NEW: Initialize servings_remaining to servings
             'ingredients_list': json.dumps(ingredient_names),
             'quantities_list': json.dumps(quantities),
             # Total nutrition
@@ -84,6 +88,14 @@ class MealOperations:
         if not meal:
             raise ValueError(f"Meal with ID {meal_id} not found")
 
+        # Check if enough servings are available (only for new meals with servings_remaining data)
+        servings_remaining = meal.get('servings_remaining')
+        if servings_remaining is not None and not pd.isna(servings_remaining):
+            if float(servings_remaining) < servings_consumed:
+                available = float(servings_remaining)
+                raise ValueError(
+                    f"Not enough servings available. Requested: {servings_consumed}, Available: {available}")
+
         daily_nutrition_df = self.csv_handler.read_csv(self.daily_nutrition_file)
 
         # Calculate nutrition for consumed servings
@@ -110,6 +122,12 @@ class MealOperations:
         daily_nutrition_df = pd.concat([daily_nutrition_df, pd.DataFrame([new_entry])], ignore_index=True)
         self.csv_handler.write_csv(daily_nutrition_df, self.daily_nutrition_file)
 
+        # Update servings_remaining (subtract consumed servings)
+        try:
+            self.csv_handler.update_servings_remaining(meal_id, -servings_consumed)
+        except Exception as e:
+            print(f"Could not update servings_remaining: {e}")
+
         return new_entry
 
     def get_daily_nutrition(self, date: str) -> List[Dict]:
@@ -127,17 +145,42 @@ class MealOperations:
         if daily_nutrition_df.empty:
             return
 
-        # Remove the entry
-        daily_nutrition_df = daily_nutrition_df[
-            ~((daily_nutrition_df['date'] == date) & (daily_nutrition_df['entry_id'] == entry_id))
-        ]
-        self.csv_handler.write_csv(daily_nutrition_df, self.daily_nutrition_file)
+        # Find the entry to get meal_id and servings_consumed before removing
+        entry_mask = (daily_nutrition_df['date'] == date) & (daily_nutrition_df['entry_id'] == entry_id)
+        if entry_mask.any():
+            entry = daily_nutrition_df[entry_mask].iloc[0]
+            meal_id = entry['meal_id']
+            servings_consumed = entry['servings_consumed']
+
+            # Remove the entry
+            daily_nutrition_df = daily_nutrition_df[~entry_mask]
+            self.csv_handler.write_csv(daily_nutrition_df, self.daily_nutrition_file)
+
+            # Add servings back to servings_remaining
+            try:
+                self.csv_handler.update_servings_remaining(meal_id, servings_consumed)
+            except Exception as e:
+                print(f"Could not update servings_remaining: {e}")
+        else:
+            print(f"Entry not found: date={date}, entry_id={entry_id}")
 
     def clear_daily_nutrition(self, date: str):
         """Clear all nutrition entries for a specific date"""
         daily_nutrition_df = self.csv_handler.read_csv(self.daily_nutrition_file)
         if daily_nutrition_df.empty:
             return
+
+        # Get all entries for the date to restore servings_remaining
+        date_entries = daily_nutrition_df[daily_nutrition_df['date'] == date]
+
+        # Restore servings for each entry
+        for _, entry in date_entries.iterrows():
+            try:
+                meal_id = entry['meal_id']
+                servings_consumed = entry['servings_consumed']
+                self.csv_handler.update_servings_remaining(meal_id, servings_consumed)
+            except Exception as e:
+                print(f"Could not restore servings for meal {entry['meal_id']}: {e}")
 
         # Remove all entries for the date
         daily_nutrition_df = daily_nutrition_df[daily_nutrition_df['date'] != date]

@@ -100,6 +100,24 @@ body {
     margin-bottom: 0.75rem;
 }
 
+/* Servings remaining indicators */
+.text-success {
+    color: #198754 !important;
+}
+
+.text-warning {
+    color: #ffc107 !important;
+}
+
+.text-danger {
+    color: #dc3545 !important;
+}
+
+#mealSelect option:disabled {
+    color: #6c757d;
+    background-color: #f8f9fa;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
     #dailyNutritionTable {

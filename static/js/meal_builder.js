@@ -4,8 +4,16 @@ let currentIngredient = null;
 
 // Load ingredients when page loads
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Page loaded, loading ingredients...');
-    loadIngredients();
+    console.log('Page loaded, checking if ingredients needed...');
+
+    // Only load ingredients if we're on the create meal page (check for ingredientSelect element)
+    const ingredientSelect = document.getElementById('ingredientSelect');
+    if (ingredientSelect) {
+        console.log('Create meal page detected, loading ingredients...');
+        loadIngredients();
+    } else {
+        console.log('Not on create meal page, skipping ingredient loading');
+    }
 });
 
 async function loadIngredients() {
@@ -27,6 +35,13 @@ async function loadIngredients() {
         console.log('Parsed ingredients:', ingredients);
 
         const select = document.getElementById('ingredientSelect');
+
+        // Double-check the element exists (defensive programming)
+        if (!select) {
+            console.log('ingredientSelect element not found, skipping dropdown population');
+            return;
+        }
+
         select.innerHTML = '<option value="">Choose an ingredient...</option>';
 
         ingredients.forEach(ingredient => {
@@ -40,7 +55,12 @@ async function loadIngredients() {
 
     } catch (error) {
         console.error('Error details:', error);
-        showMessage('Error loading ingredients: ' + error.message, 'danger');
+
+        // Only show message if we have a messageArea element (i.e., we're on the right page)
+        const messageArea = document.getElementById('messageArea');
+        if (messageArea) {
+            showMessage('Error loading ingredients: ' + error.message, 'danger');
+        }
     }
 }
 
@@ -266,6 +286,13 @@ async function saveMeal() {
 
 function showMessage(message, type) {
     const messageArea = document.getElementById('messageArea');
+
+    // Only show message if messageArea exists (defensive programming)
+    if (!messageArea) {
+        console.log('Message (no messageArea):', message);
+        return;
+    }
+
     messageArea.innerHTML = `
         <div class="alert alert-${type} alert-dismissible fade show" role="alert">
             ${message}

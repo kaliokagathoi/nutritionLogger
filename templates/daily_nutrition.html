@@ -124,7 +124,7 @@
             <div class="card-body">
                 <div class="nutrition-goal">
                     <strong>Calories:</strong>
-                    <span id="calorieProgress">0</span> / <span class="target">2000</span>
+                    <span id="calorieProgress">0</span> / <span class="target">2500</span>
                     <div class="progress mt-1">
                         <div class="progress-bar" id="calorieBar" style="width: 0%"></div>
                     </div>
@@ -164,7 +164,7 @@
             </div>
         </div>
 
-        <!-- Selected Meal Preview -->
+                <!-- Selected Meal Preview -->
         <div class="card mt-4" id="mealPreview" style="display: none;">
             <div class="card-header">
                 <h5>Meal Preview</h5>
@@ -183,7 +183,10 @@
                 <div class="nutrition-item">
                     <strong>Carbs:</strong> <span id="previewCarbs">0</span>g
                 </div>
-                <small class="text-muted">Recipe serves: <span id="previewServings">1</span></small>
+                <div class="mt-2">
+                    <small class="text-muted">Recipe serves: <span id="previewServings">1</span></small><br>
+                    <small class="text-success" id="previewRemaining">Remaining: <span id="previewServingsRemaining">-</span></small>
+                </div>
             </div>
         </div>
     </div>

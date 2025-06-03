@@ -19,7 +19,7 @@ class CSVHandler:
     def _initialize_csv_files(self):
         """Create meal CSV files if they don't exist (ingredients.csv already exists)"""
 
-        # Meals database - stores created meal recipes (ONLY create new files with servings_remaining)
+        # Meals database - stores created meal recipes (UPDATED with servings and servings_remaining)
         if not os.path.exists(self.meals_file):
             meals_df = pd.DataFrame(columns=[
                 'meal_id', 'meal_name', 'servings', 'servings_remaining', 'ingredients_list', 'quantities_list',
@@ -34,13 +34,11 @@ class CSVHandler:
                 'created_date'
             ])
             meals_df.to_csv(self.meals_file, index=False)
-            print(f"Created new meals.csv with servings_remaining column")
-        # NOTE: If meals.csv already exists, we DON'T modify it
 
-        # Meal log - logs when meals are consumed (ONLY create new files with servings_remaining)
+        # Meal log - logs when meals are consumed (UPDATED with servings)
         if not os.path.exists(self.meal_log_file):
             meal_log_df = pd.DataFrame(columns=[
-                'log_id', 'date', 'meal_time', 'meal_id', 'meal_name', 'servings', 'servings_remaining',
+                'log_id', 'date', 'meal_time', 'meal_id', 'meal_name', 'servings',
                 'ingredients_list', 'quantities_list',
                 # Total nutrition
                 'total_calories', 'total_protein', 'total_fat_total', 'total_fat_saturated',
@@ -53,8 +51,6 @@ class CSVHandler:
                 'notes'
             ])
             meal_log_df.to_csv(self.meal_log_file, index=False)
-            print(f"Created new meal_log.csv with servings_remaining column")
-        # NOTE: If meal_log.csv already exists, we DON'T modify it
 
     def read_csv(self, file_path: str) -> pd.DataFrame:
         """Safely read CSV file"""
@@ -72,3 +68,55 @@ class CSVHandler:
         if df.empty:
             return 1
         return int(df[id_column].max()) + 1
+
+    def ensure_servings_remaining_column(self):
+        """Add servings_remaining column to existing meals.csv if it doesn't exist"""
+        meals_df = self.read_csv(self.meals_file)
+
+        if not meals_df.empty and 'servings_remaining' not in meals_df.columns:
+            # Add servings_remaining column, set to NaN for existing meals
+            # (we don't want to retrospectively apply this to existing meals)
+            meals_df['servings_remaining'] = None
+            self.write_csv(meals_df, self.meals_file)
+            print("Added servings_remaining column to existing meals.csv")
+
+        return meals_df
+
+    def update_servings_remaining(self, meal_id: int, servings_change: float):
+        """Update servings_remaining for a specific meal (positive = add, negative = subtract)"""
+        meals_df = self.read_csv(self.meals_file)
+
+        if meals_df.empty:
+            return
+
+        # Ensure servings_remaining column exists
+        if 'servings_remaining' not in meals_df.columns:
+            meals_df['servings_remaining'] = None
+
+        # Find the meal
+        meal_mask = meals_df['meal_id'] == meal_id
+        if not meal_mask.any():
+            raise ValueError(f"Meal with ID {meal_id} not found")
+
+        # Get current servings_remaining (could be NaN for old meals)
+        current_remaining = meals_df.loc[meal_mask, 'servings_remaining'].iloc[0]
+
+        # If it's NaN (old meal), we can't track remaining servings
+        if pd.isna(current_remaining):
+            print(
+                f"Warning: Cannot update servings for meal {meal_id} - no servings_remaining data (created before this feature)")
+            return
+
+        # Update servings_remaining
+        new_remaining = float(current_remaining) + servings_change
+
+        # Don't let it go negative
+        if new_remaining < 0:
+            print(f"Warning: Attempted to consume more servings than available for meal {meal_id}")
+            new_remaining = 0
+
+        meals_df.loc[meal_mask, 'servings_remaining'] = new_remaining
+        self.write_csv(meals_df, self.meals_file)
+
+        print(f"Updated meal {meal_id}: servings_remaining = {new_remaining}")
+        return new_remaining

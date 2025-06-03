@@ -34,6 +34,9 @@ csv_handler = CSVHandler(CSV_DIR, DATA_DIR)
 ingredient_ops = IngredientOperations(csv_handler)
 meal_ops = MealOperations(csv_handler)
 
+# Ensure servings_remaining column exists on startup
+csv_handler.ensure_servings_remaining_column()
+
 
 @app.route('/')
 def index():
