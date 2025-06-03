@@ -71,16 +71,29 @@ class CSVHandler:
 
     def ensure_servings_remaining_column(self):
         """Add servings_remaining column to existing meals.csv if it doesn't exist"""
-        meals_df = self.read_csv(self.meals_file)
+        try:
+            meals_df = self.read_csv(self.meals_file)
 
-        if not meals_df.empty and 'servings_remaining' not in meals_df.columns:
-            # Add servings_remaining column, set to NaN for existing meals
-            # (we don't want to retrospectively apply this to existing meals)
-            meals_df['servings_remaining'] = None
-            self.write_csv(meals_df, self.meals_file)
-            print("Added servings_remaining column to existing meals.csv")
+            if meals_df.empty:
+                print("Meals CSV is empty, nothing to update")
+                return meals_df
 
-        return meals_df
+            if 'servings_remaining' not in meals_df.columns:
+                # Add servings_remaining column, set to None for existing meals
+                # (we don't want to retrospectively apply this to existing meals)
+                meals_df['servings_remaining'] = None
+                self.write_csv(meals_df, self.meals_file)
+                print("Added servings_remaining column to existing meals.csv")
+            else:
+                print("servings_remaining column already exists")
+
+            return meals_df
+
+        except Exception as e:
+            print(f"Error in ensure_servings_remaining_column: {e}")
+            import traceback
+            traceback.print_exc()
+            return pd.DataFrame()
 
     def update_servings_remaining(self, meal_id: int, servings_change: float):
         """Update servings_remaining for a specific meal (positive = add, negative = subtract)"""

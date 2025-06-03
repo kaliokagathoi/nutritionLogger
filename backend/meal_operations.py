@@ -90,11 +90,14 @@ class MealOperations:
 
         # Check if enough servings are available (only for new meals with servings_remaining data)
         servings_remaining = meal.get('servings_remaining')
-        if servings_remaining is not None and not pd.isna(servings_remaining):
-            if float(servings_remaining) < servings_consumed:
-                available = float(servings_remaining)
-                raise ValueError(
-                    f"Not enough servings available. Requested: {servings_consumed}, Available: {available}")
+        if servings_remaining is not None and servings_remaining != '' and not pd.isna(servings_remaining):
+            try:
+                remaining_float = float(servings_remaining)
+                if remaining_float < servings_consumed:
+                    raise ValueError(
+                        f"Not enough servings available. Requested: {servings_consumed}, Available: {remaining_float}")
+            except (ValueError, TypeError) as e:
+                print(f"Could not parse servings_remaining: {servings_remaining}, error: {e}")
 
         daily_nutrition_df = self.csv_handler.read_csv(self.daily_nutrition_file)
 
@@ -137,7 +140,19 @@ class MealOperations:
             return []
 
         day_entries = daily_nutrition_df[daily_nutrition_df['date'] == date]
-        return day_entries.to_dict('records')
+
+        # Convert to dict and manually clean up NaN values
+        entries_list = day_entries.to_dict('records')
+
+        # Clean up NaN values manually
+        for entry in entries_list:
+            for key, value in entry.items():
+                if pd.isna(value):
+                    entry[key] = None
+                elif isinstance(value, str) and value.lower() == 'nan':
+                    entry[key] = None
+
+        return entries_list
 
     def remove_daily_nutrition_entry(self, date: str, entry_id: int):
         """Remove a specific entry from daily nutrition"""
@@ -237,8 +252,47 @@ class MealOperations:
 
     def get_all_meals(self) -> List[Dict]:
         """Get all created meals"""
-        meals_df = self.csv_handler.read_csv(self.csv_handler.meals_file)
-        return meals_df.to_dict('records')
+        try:
+            meals_df = self.csv_handler.read_csv(self.csv_handler.meals_file)
+
+            if meals_df.empty:
+                return []
+
+            # Ensure servings_remaining column exists
+            if 'servings_remaining' not in meals_df.columns:
+                meals_df['servings_remaining'] = None
+
+            # Filter out invalid meals (empty meal_name or meal_id)
+            valid_meals_mask = (
+                    meals_df['meal_name'].notna() &
+                    (meals_df['meal_name'] != '') &
+                    meals_df['meal_id'].notna()
+            )
+            meals_df = meals_df[valid_meals_mask]
+
+            if meals_df.empty:
+                print("No valid meals found after filtering")
+                return []
+
+            # Convert to dict first, then clean up NaN values
+            meals_list = meals_df.to_dict('records')
+
+            # Clean up NaN values manually
+            for meal in meals_list:
+                for key, value in meal.items():
+                    if pd.isna(value):
+                        meal[key] = None
+                    elif isinstance(value, str) and value.lower() == 'nan':
+                        meal[key] = None
+
+            print(f"Successfully loaded {len(meals_list)} valid meals")
+            return meals_list
+
+        except Exception as e:
+            print(f"Error in get_all_meals: {e}")
+            import traceback
+            traceback.print_exc()
+            return []
 
     def get_meal_by_id(self, meal_id: int) -> Optional[Dict]:
         """Get specific meal by ID"""
@@ -247,7 +301,20 @@ class MealOperations:
             return None
 
         meal = meals_df[meals_df['meal_id'] == meal_id]
-        return meal.iloc[0].to_dict() if not meal.empty else None
+        if meal.empty:
+            return None
+
+        # Convert to dict and manually clean up NaN values
+        meal_dict = meal.iloc[0].to_dict()
+
+        # Clean up NaN values manually
+        for key, value in meal_dict.items():
+            if pd.isna(value):
+                meal_dict[key] = None
+            elif isinstance(value, str) and value.lower() == 'nan':
+                meal_dict[key] = None
+
+        return meal_dict
 
     def _calculate_total_nutrition(self, ingredients: List[Dict]) -> Dict:
         """Calculate total nutrition for a list of ingredients with quantities"""

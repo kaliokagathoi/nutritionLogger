@@ -95,7 +95,9 @@ def meals():
     try:
         if request.method == 'GET':
             """Get all meals"""
+            print("GET /api/meals - fetching all meals")
             meals = meal_ops.get_all_meals()
+            print(f"Found {len(meals)} meals")
             return jsonify(meals)
 
         elif request.method == 'POST':
@@ -123,7 +125,7 @@ def meals():
             return jsonify(meal)
 
     except Exception as e:
-        print(f"Error in meals: {e}")
+        print(f"Error in meals endpoint: {e}")
         import traceback
         traceback.print_exc()  # Print full traceback for debugging
         return jsonify({'error': str(e)}), 500

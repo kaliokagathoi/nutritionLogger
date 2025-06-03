@@ -42,7 +42,16 @@ function updateMealsDropdown() {
     const select = document.getElementById('mealSelect');
     select.innerHTML = '<option value="">Choose a meal...</option>';
 
-    meals.forEach(meal => {
+    // Filter out invalid meals (null/empty meal_name or meal_id)
+    const validMeals = meals.filter(meal =>
+        meal.meal_name &&
+        meal.meal_name.trim() !== '' &&
+        meal.meal_name !== 'null' &&
+        meal.meal_id &&
+        meal.meal_id !== null
+    );
+
+    validMeals.forEach(meal => {
         const option = document.createElement('option');
         option.value = meal.meal_id;
 
@@ -64,6 +73,8 @@ function updateMealsDropdown() {
         option.textContent = displayText;
         select.appendChild(option);
     });
+
+    console.log(`Filtered ${meals.length - validMeals.length} invalid meals, showing ${validMeals.length} valid meals`);
 }
 
 async function refreshMeals() {
